@@ -1,3 +1,2 @@
 # Practice
-Somewhere to practice
-This is arepository to practise things I learn at https://www.freecodecamp.org/.
+This is a repository to practise things I learn at https://www.freecodecamp.org/.
