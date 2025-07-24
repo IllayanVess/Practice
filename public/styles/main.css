@@ -33,3 +33,58 @@ nav a {
 nav a:hover {
     background: #555;
 }
+
+/* Basic button styling */
+.portfolio-button {
+    display: inline-block;
+    padding: 12px 24px;
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    text-decoration: none;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    outline: none;
+}
+
+/* Hover effect */
+.portfolio-button:hover {
+    background-color: #45a049; /* Darker green */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Focus effect for accessibility */
+.portfolio-button:focus {
+    outline: 2px solid #222;
+    outline-offset: 2px;
+    background-color: #388e3c;
+}
+
+/* Active/click effect */
+.portfolio-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 3px rgba(0,0,0,0.2);
+}
+
+/* Optional: Center the button on page */
+.button-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 40vh; /* Reduced height for better layout */
+}
+
+/* Responsive button */
+@media (max-width: 500px) {
+    .portfolio-button {
+        width: 90%;
+        font-size: 14px;
+        padding: 10px 0;
+    }
+}
