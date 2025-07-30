@@ -2,77 +2,109 @@
 require('dotenv').config();
 
 // Import required modules
-const express = require('express'); // Web server framework
-const axios = require('axios');     // For making HTTP requests
-const path = require('path');       // For handling file paths
-const cors = require('cors');       // To allow cross-origin requests (frontend can call backend)
+const express = require('express');
+const axios = require('axios');
+const path = require('path');
+const cors = require('cors');
 
 // Create an Express app
 const app = express();
-const PORT = process.env.PORT || 3000; // Use port from .env or default to 3000
+const PORT = process.env.PORT || 3000;
+
+// Enhanced CORS configuration
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL 
+    : 'http://localhost:5500', // Adjust to match your frontend port
+  optionsSuccessStatus: 200
+};
 
 // Middleware
-app.use(cors()); // Enable CORS so browser can access API
-app.use(express.static(path.join(__dirname, '../'))); // Serve static files (HTML, CSS, JS) from parent directory
+app.use(cors(corsOptions));
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Weather Endpoint - handles requests for current weather
-app.get('/api/weather', async (req, res) => {
+// API Key Validation Middleware
+const validateApiKey = (req, res, next) => {
+  if (!process.env.OPENWEATHER_API_KEY) {
+    return res.status(500).json({ error: 'Server configuration error: API key not configured' });
+  }
+  next();
+};
+
+// Weather Endpoint
+app.get('/api/weather', validateApiKey, async (req, res) => {
   try {
-    // Get query parameters from the request (city name or latitude/longitude)
     const { city, lat, lon } = req.query;
     
-    // Check if API key is available
-    if (!process.env.OPENWEATHER_API_KEY) {
-      throw new Error('API key not configured');
+    if (!city && !(lat && lon)) {
+      return res.status(400).json({ error: 'Either city or lat/lon parameters required' });
     }
 
-    // Build the OpenWeatherMap API URL
-    let url = `https://api.openweathermap.org/data/2.5/weather?units=metric&appid=${process.env.OPENWEATHER_API_KEY}`;
-    if (city) url += `&q=${city}`;           // Add city to URL if provided
-    if (lat && lon) url += `&lat=${lat}&lon=${lon}`; // Add coordinates if provided
+    const params = {
+      units: 'metric',
+      appid: process.env.OPENWEATHER_API_KEY,
+      ...(city && { q: city }),
+      ...(lat && lon && { lat, lon })
+    };
 
-    // Make request to OpenWeatherMap API
-    const response = await axios.get(url);
-    res.json(response.data); // Send weather data back to browser
+    const response = await axios.get('https://api.openweathermap.org/data/2.5/weather', { params });
+    res.json(response.data);
   } catch (error) {
-    // If there's an error, log it and send an error message to browser
-    console.error('API Error:', error.message);
-    res.status(500).json({ 
-      error: error.response?.data?.message || 'Weather data unavailable' 
-    });
+    console.error('Weather API Error:', error.message);
+    const status = error.response?.status || 500;
+    const message = error.response?.data?.message || 'Weather data unavailable';
+    res.status(status).json({ error: message });
   }
 });
 
-// Forecast Endpoint - handles requests for weather forecast
-app.get('/api/forecast', async (req, res) => {
+// Forecast Endpoint
+app.get('/api/forecast', validateApiKey, async (req, res) => {
   try {
-    // Get query parameters from the request
     const { city, lat, lon } = req.query;
-
-    // Check if API key is available
-    if (!process.env.OPENWEATHER_API_KEY) {
-      throw new Error('API key not configured');
+    
+    if (!city && !(lat && lon)) {
+      return res.status(400).json({ error: 'Either city or lat/lon parameters required' });
     }
 
-    // Build the OpenWeatherMap API URL for forecast
-    let url = `https://api.openweathermap.org/data/2.5/forecast?units=metric&appid=${process.env.OPENWEATHER_API_KEY}`;
-    if (city) url += `&q=${city}`;
-    if (lat && lon) url += `&lat=${lat}&lon=${lon}`;
+    const params = {
+      units: 'metric',
+      appid: process.env.OPENWEATHER_API_KEY,
+      ...(city && { q: city }),
+      ...(lat && lon && { lat, lon })
+    };
 
-    // Make request to OpenWeatherMap API
-    const response = await axios.get(url);
-    res.json(response.data); // Send forecast data back to browser
+    const response = await axios.get('https://api.openweathermap.org/data/2.5/forecast', { params });
+    res.json(response.data);
   } catch (error) {
-    // If there's an error, log it and send an error message to browser
-    console.error('API Error:', error.message);
-    res.status(500).json({
-      error: error.response?.data?.message || 'Forecast data unavailable'
-    });
+    console.error('Forecast API Error:', error.message);
+    const status = error.response?.status || 500;
+    const message = error.response?.data?.message || 'Forecast data unavailable';
+    res.status(status).json({ error: message });
   }
 });
 
-// Start Server - listen for requests
+// Health Check Endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'healthy' });
+});
+
+// Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error('Server Error:', err.stack);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// Start Server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`API Test: http://localhost:${PORT}/api/weather?city=Paris`);
+  console.log(`API Endpoints:`);
+  console.log(`- Weather: http://localhost:${PORT}/api/weather?city=Paris`);
+  console.log(`- Forecast: http://localhost:${PORT}/api/forecast?city=Paris`);
+  console.log(`- Health Check: http://localhost:${PORT}/api/health`);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err);
 });
